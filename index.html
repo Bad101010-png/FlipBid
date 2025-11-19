@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlipBid Ultimate</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0066FF; /* Modern Tech Blue */
+            --secondary: #0F172A; /* Slate Dark */
+            --accent: #F59E0B; /* Amber/Gold */
+            --success: #10B981;
+            --danger: #EF4444;
+            --bg: #F1F5F9;
+            --card-bg: #ffffff;
+            --text: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: #1e293b; 
+            height: 100vh; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            height: 100vh;
+            max-height: 932px;
+            background: var(--bg);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* --- Header --- */
+        header {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            z-index: 20;
+        }
+        header h1 { font-size: 1.3rem; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+
+        /* --- Screens & Transitions --- */
+        .screen {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        .screen.active { display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Components --- */
+        .btn-primary {
+            background: var(--primary); color: white; border: none;
+            padding: 16px; border-radius: 14px; width: 100%;
+            font-weight: 600; font-size: 1rem; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+            transition: transform 0.1s;
+        }
+        .btn-primary:active { transform: scale(0.97); }
+
+        .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .cat-card {
+            background: var(--card-bg); padding: 20px; border-radius: 16px;
+            text-align: center; cursor: pointer; transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .cat-card:active { transform: scale(0.96); }
+        .cat-card i { font-size: 1.8rem; color: var(--primary); margin-bottom: 10px; }
+        .cat-card p { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+
+        /* --- Request & Bid Cards --- */
+        .request-card {
+            background: var(--card-bg); padding: 16px; border-radius: 16px;
+            margin-bottom: 12px; border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .status-badge {
+            position: absolute; top: 16px; right: 16px;
+            font-size: 0.7rem; font-weight: 700; padding: 4px 10px;
+            border-radius: 20px; text-transform: uppercase;
+        }
+        .status-pending { background: #fff7ed; color: var(--accent); }
+        .status-bids { background: #ecfdf5; color: var(--success); }
+
+        /* --- Bidder List UI --- */
+        .bid-item {
+            background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;
+        }
+        .bid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .vendor-info { display: flex; align-items: center; gap: 10px; }
+        .vendor-avatar { width: 40px; height: 40px; background: #eff6ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .verified-badge { color: var(--primary); font-size: 0.8rem; margin-left: 4px; }
+        
+        .bid-price { font-size: 1.5rem; font-weight: 700; color: var(--secondary); }
+        
+        .bid-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 15px; }
+        .action-btn { padding: 10px; border-radius: 10px; border: none; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+        .btn-accept { background: var(--success); color: white; }
+        .btn-bargain { background: var(--accent); color: white; }
+        .btn-reject { background: #fee2e2; color: var(--danger); }
+
+        /* --- Sidebar --- */
+        .sidebar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 50; display: none; backdrop-filter: blur(2px); }
+        .sidebar {
+            position: absolute; top: 0; left: -280px; width: 280px; height: 100%;
+            background: white; z-index: 60; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-header { padding: 30px; background: var(--secondary); color: white; }
+        .sidebar li { padding: 15px 30px; cursor: pointer; color: var(--text); font-weight: 500; display: flex; align-items: center; gap: 15px; }
+        .sidebar li:hover { background: #f8fafc; color: var(--primary); }
+
+        /* --- Modals --- */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100; display: none;
+            justify-content: center; align-items: flex-end;
+        }
+        .modal-content {
+            background: white; width: 100%; border-radius: 24px 24px 0 0; padding: 30px;
+            animation: slideUp 0.3s; box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+
+        /* Inputs */
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 1rem; outline: none; transition: 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); ring: 2px solid var(--primary); }
+
+        /* File Upload */
+        .file-upload { border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; }
+        .file-upload:hover { border-color: var(--primary); background: #f8fafc; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 id="menu-user">Guest</h2>
+            <p id="menu-role" style="opacity:0.7; font-size:0.9rem;">Not Logged In</p>
+        </div>
+        <ul id="menu-list"></ul>
+    </div>
+
+    <header id="main-header" style="display: none;">
+        <i class="fas fa-bars" style="font-size: 1.2rem; cursor: pointer;" onclick="toggleMenu()"></i>
+        <h1>FlipBid</h1>
+        <div onclick="navTo('profile-screen')" style="width: 35px; height: 35px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <i class="fas fa-user" style="color: #64748b;"></i>
+        </div>
+    </header>
+
+    <div id="landing-screen" class="screen active" style="background: var(--secondary); color: white; text-align: center; padding-top: 150px;">
+        <div style="margin-bottom: 50px;">
+            <i class="fas fa-layer-group" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;"></i>
+            <h1 style="font-size: 2.5rem; font-weight: 800;">FlipBid</h1>
+            <p style="color: #94a3b8; font-size: 1.1rem;">Service & Material Marketplace</p>
+        </div>
+        <div style="padding: 20px;">
+            <button class="btn-primary" onclick="login('customer')" style="margin-bottom: 15px; background: white; color: var(--secondary);">I'm a Customer</button>
+            <button class="btn-primary" onclick="login('vendor')" style="background: rgba(255,255,255,0.1);">I'm a Vendor</button>
+        </div>
+    </div>
+
+    <div id="customer-dash" class="screen">
+        <div style="background: var(--secondary); border-radius: 20px; padding: 25px; color: white; margin-bottom: 25px;">
+            <p style="font-size: 0.9rem; opacity: 0.8;">Welcome back,</p>
+            <h2 id="dash-name">Ali Hassan</h2>
+            <div style="margin-top: 15px; display: flex; gap: 10px; font-size: 0.85rem;">
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px;">Bahrain</span>
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px;" id="dash-time">--:--</span>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 15px; font-weight: 600;">What do you need?</h3>
+        <div class="cat-grid">
+            <div class="cat-card" onclick="startRequest('Cleaning')"><i class="fas fa-broom"></i><p>Cleaning</p></div>
+            <div class="cat-card" onclick="startRequest('Plumbing')"><i class="fas fa-faucet"></i><p>Plumbing</p></div>
+            <div class="cat-card" onclick="startRequest('Car Repair')"><i class="fas fa-car"></i><p>Auto Repair</p></div>
+            <div class="cat-card" onclick="startRequest('AC')"><i class="fas fa-wind"></i><p>AC Service</p></div>
+            <div class="cat-card" onclick="startRequest('Construction')"><i class="fas fa-hammer"></i><p>Renovation</p></div>
+            <div class="cat-card" onclick="startRequest('Electrical')"><i class="fas fa-bolt"></i><p>Electrical</p></div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h3 style="margin-bottom: 15px; font-weight: 600;">Active Requests</h3>
+            <div id="active-requests-list">
+                </div>
+        </div>
+    </div>
+
+    <div id="request-screen" class="screen">
+        <h2 style="margin-bottom: 20px;">New Request</h2>
+        
+        <div class="input-group">
+            <label>Service Category</label>
+            <input type="text" id="req-cat-display" disabled style="background: #f8fafc; color: #64748b;">
+        </div>
+
+        <div class="input-group">
+            <label>Specific Service</label>
+            <select id="req-detail"></select>
+        </div>
+
+        <div class="input-group">
+            <label>Urgency</label>
+            <select id="req-urgency">
+                <option value="Normal">Normal (Within 2 Days)</option>
+                <option value="High">High (Today)</option>
+                <option value="Emergency">Emergency (Immediate)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Description</label>
+            <textarea id="req-desc" rows="3" placeholder="Describe the problem clearly..."></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>Photos (Optional)</label>
+            <div class="file-upload" onclick="document.getElementById('file-in').click()">
+                <i class="fas fa-camera" style="font-size: 1.5rem; color: #cbd5e1;"></i>
+                <p id="file-txt" style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">Tap to upload</p>
+                <input type="file" id="file-in" hidden onchange="document.getElementById('file-txt').innerText = 'Photo Added!'">
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="submitRequest()">Post Request</button>
+        <button style="background: transparent; border: none; width: 100%; padding: 15px; color: #64748b; margin-top: 10px;" onclick="navTo('customer-dash')">Cancel</button>
+    </div>
+
+    <div id="view-bids-screen" class="screen">
+        <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+            <i class="fas fa-arrow-left" onclick="navTo('customer-dash')" style="cursor:pointer;"></i>
+            <h2 style="font-size:1.2rem;">Compare Bids</h2>
+        </div>
+
+        <div id="bids-container">
+            </div>
+    </div>
+
+    <div id="profile-screen" class="screen">
+        <h2 style="margin-bottom: 20px;">My Profile</h2>
+        <div class="input-group"><label>Name</label><input type="text" id="p-name" value="Ali Hassan"></div>
+        <div class="input-group"><label>Email</label><input type="email" id="p-email" value="ali@example.com"></div>
+        <div class="input-group"><label>Address</label><input type="text" id="p-addr" value="Manama, Block 338"></div>
+        <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+    </div>
+
+    <div id="complaint-screen" class="screen">
+        <h2>File Complaint</h2>
+        <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">We are here to resolve any issues.</p>
+        <div class="input-group"><label>Order #</label><input type="text"></div>
+        <div class="input-group"><label>Issue</label><textarea rows="4"></textarea></div>
+        <button class="btn-primary" onclick="alert('Ticket Created.'); navTo('customer-dash')">Submit</button>
+    </div>
+
+    <div id="contact-screen" class="screen">
+        <h2>Contact Support</h2>
+        <div style="background: white; padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px;">
+            <p style="font-weight: bold;">FlipBid HQ</p>
+            <p style="color:#64748b;">support@flipbid.bh</p>
+        </div>
+        <div class="input-group"><label>Message</label><textarea rows="4"></textarea></div>
+        <button class="btn-primary" onclick="alert('Message Sent.'); navTo('customer-dash')">Send</button>
+    </div>
+
+    <div id="vendor-dash" class="screen">
+        <h2>Vendor Portal</h2>
+        <div style="background: var(--secondary); color: white; padding: 20px; border-radius: 16px; margin: 20px 0;">
+            <h3>Incoming Leads</h3>
+            <p id="v-lead-count" style="font-size: 2rem; font-weight: 700; color: var(--accent);">0</p>
+        </div>
+        <div id="vendor-leads-list"></div>
+        <button class="btn-primary" style="margin-top:20px;" onclick="navTo('supplier-screen')">Order Supplies</button>
+    </div>
+
+    <div id="supplier-screen" class="screen">
+        <h2>Supplier Market</h2>
+        <div id="supplier-list" style="margin-top:20px;"></div>
+        <button style="margin-top:20px; width:100%; padding:15px; border:none; background:#cbd5e1; border-radius:12px;" onclick="navTo('vendor-dash')">Back</button>
+    </div>
+
+    <div id="bargain-modal" class="modal">
+        <div class="modal-content">
+            <h3>Make an Offer</h3>
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Vendor's Price: <span id="modal-orig-price" style="font-weight:bold; color:var(--secondary);"></span> BHD</p>
+            
+            <div class="input-group">
+                <label>Your Counter Offer (BHD)</label>
+                <input type="number" id="bargain-input" placeholder="e.g. 20">
+            </div>
+            
+            <button class="btn-primary" onclick="submitCounterOffer()">Send Offer</button>
+            <button style="width:100%; padding:15px; border:none; background:white; color:#64748b; margin-top:10px;" onclick="document.getElementById('bargain-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* --- DATA --- */
+    let role = 'guest';
+    let requests = []; // {id, cat, detail, desc, urgency, status, bids: []}
+    const subtypes = {
+        'Cleaning': ['Deep Clean', 'Maid Service'],
+        'Plumbing': ['Leak Repair', 'Unblock Drain'],
+        'Car Repair': ['Tire Change', 'Battery'],
+        'AC': ['Gas Refill', 'Service'],
+        'Construction': ['Painting', 'Tiling'],
+        'Electrical': ['Wiring', 'Socket Fix']
+    };
+
+    /* --- NAVIGATION --- */
+    function login(r) {
+        role = r;
+        document.getElementById('main-header').style.display = 'flex';
+        buildMenu();
+        if(r === 'customer') {
+            document.getElementById('dash-name').innerText = document.getElementById('p-name').value;
+            navTo('customer-dash');
+        } else {
+            navTo('vendor-dash');
+            renderVendorLeads();
+        }
+    }
+
+    function navTo(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('sidebar').classList.remove('open');
+    }
+
+    function toggleMenu() {
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('overlay');
+        if(sb.classList.contains('open')) { sb.classList.remove('open'); ov.style.display='none'; }
+        else { sb.classList.add('open'); ov.style.display='block'; }
+    }
+
+    function buildMenu() {
+        const ul = document.getElementById('menu-list');
+        ul.innerHTML = '';
+        document.getElementById('menu-user').innerText = role === 'customer' ? document.getElementById('p-name').value : 'Vendor Inc.';
+        document.getElementById('menu-role').innerText = role === 'customer' ? 'Customer Account' : 'Service Partner';
+
+        if(role === 'customer') {
+            ul.innerHTML += `<li onclick="navTo('customer-dash')"><i class="fas fa-home"></i> Home</li>`;
+            ul.innerHTML += `<li onclick="navTo('profile-screen')"><i class="fas fa-user"></i> Profile</li>`;
+            ul.innerHTML += `<li onclick="navTo('complaint-screen')"><i class="fas fa-exclamation-triangle"></i> Complaints</li>`;
+            ul.innerHTML += `<li onclick="navTo('contact-screen')"><i class="fas fa-envelope"></i> Support</li>`;
+        } else {
+            ul.innerHTML += `<li onclick="navTo('vendor-dash')"><i class="fas fa-th-large"></i> Leads</li>`;
+            ul.innerHTML += `<li onclick="navTo('supplier-screen')"><i class="fas fa-boxes"></i> Suppliers</li>`;
+        }
+        ul.innerHTML += `<li onclick="location.reload()" style="color:var(--danger);"><i class="fas fa-sign-out-alt"></i> Logout</li>`;
+    }
+
+    /* --- CUSTOMER LOGIC --- */
+    let tempCat = '';
+
+    function startRequest(cat) {
+        tempCat = cat;
+        document.getElementById('req-cat-display').value = cat;
+        const sel = document.getElementById('req-detail');
+        sel.innerHTML = '';
+        subtypes[cat].forEach(s => {
+            let opt = document.createElement('option');
+            opt.innerText = s;
+            sel.appendChild(opt);
+        });
+        navTo('request-screen');
+    }
+
+    function submitRequest() {
+        const detail = document.getElementById('req-detail').value;
+        const urgency = document.getElementById('req-urgency').value;
+        const desc = document.getElementById('req-desc').value;
+
+        if(!desc) { alert('Please describe the issue'); return; }
+
+        const reqId = Date.now();
+        const newReq = {
+            id: reqId,
+            cat: tempCat,
+            detail: detail,
+            urgency: urgency,
+            desc: desc,
+            status: 'Searching Vendors...',
+            bids: []
+        };
+
+        requests.unshift(newReq);
+        navTo('customer-dash');
+        renderRequests();
+        
+        // SIMULATE BIDS COMING IN AFTER 3 SECONDS
+        setTimeout(() => {
+            simulateIncomingBids(reqId);
+        }, 3000);
+    }
+
+    function renderRequests() {
+        const list = document.getElementById('active-requests-list');
+        list.innerHTML = '';
+        if(requests.length === 0) { list.innerHTML = '<p style="text-align:center; color:#94a3b8;">No active requests.</p>'; return; }
+
+        requests.forEach(r => {
+            let statusClass = 'status-pending';
+            if(r.bids.length > 0) statusClass = 'status-bids';
+
+            let actionButton = '';
+            if(r.bids.length > 0) {
+                actionButton = `<button class="btn-primary" style="padding:10px; margin-top:10px; font-size:0.9rem;" onclick="viewBids(${r.id})">View ${r.bids.length} Bids</button>`;
+            }
+
+            list.innerHTML += `
+                <div class="request-card">
+                    <span class="status-badge ${statusClass}">${r.bids.length > 0 ? r.bids.length + ' Bids Ready' : r.status}</span>
+                    <h4 style="font-weight:600; margin-bottom:4px;">${r.cat} - ${r.detail}</h4>
+                    <p style="font-size:0.85rem; color:#64748b;">${r.desc}</p>
+                    ${actionButton}
+                </div>
+            `;
+        });
+    }
+
+    /* --- SIMULATION LOGIC --- */
+    function simulateIncomingBids(reqId) {
+        const req = requests.find(r => r.id === reqId);
+        if(!req) return;
+
+        // Generate 3 mock vendors
+        const mockVendors = [
+            { name: 'QuickFix Pro', rating: 4.8, price: Math.floor(Math.random() * 20) + 20 },
+            { name: 'Bahrain Services', rating: 4.5, price: Math.floor(Math.random() * 20) + 15 },
+            { name: 'Master Tech', rating: 4.9, price: Math.floor(Math.random() * 20) + 30 }
+        ];
+
+        req.bids = mockVendors;
+        req.status = 'Bids Received';
+        renderRequests();
+        
+        // Notification sound simulation
+        alert(`Good news! 3 Vendors have bid on your ${req.cat} request.`);
+    }
+
+    /* --- BIDDING & BARGAINING --- */
+    let currentReqId = null;
+    let currentVendorIdx = null;
+
+    function viewBids(reqId) {
+        currentReqId = reqId;
+        const req = requests.find(r => r.id === reqId);
+        const container = document.getElementById('bids-container');
+        container.innerHTML = '';
+
+        if(!req || req.bids.length === 0) return;
+
+        req.bids.forEach((bid, index) => {
+            container.innerHTML += `
+                <div class="bid-item" id="bid-${index}">
+                    <div class="bid-header">
+                        <div class="vendor-info">
+                            <div class="vendor-avatar">${bid.name.charAt(0)}</div>
+                            <div>
+                                <div style="font-weight:600;">${bid.name} <i class="fas fa-check-circle verified-badge"></i></div>
+                                <div style="font-size:0.8rem; color:#f59e0b;"><i class="fas fa-star"></i> ${bid.rating}</div>
+                            </div>
+                        </div>
+                        <div class="bid-price">${bid.price} BHD</div>
+                    </div>
+                    <p style="font-size:0.9rem; color:#64748b; margin-bottom:10px;">"I can complete this job within your requested timeframe with high quality tools."</p>
+                    <div class="bid-actions">
+                        <button class="action-btn btn-accept" onclick="acceptBid(${reqId}, ${index})">Accept</button>
+                        <button class="action-btn btn-bargain" onclick="openBargain(${reqId}, ${index}, ${bid.price})">Bargain</button>
+                        <button class="action-btn btn-reject" onclick="rejectBid(${reqId}, ${index})">Reject</button>
+                    </div>
+                </div>
+            `;
+        });
+        navTo('view-bids-screen');
+    }
+
+    function acceptBid(reqId, idx) {
+        if(confirm("Accept this bid and book the service?")) {
+            const req = requests.find(r => r.id === reqId);
+            const winner = req.bids[idx];
+            req.status = `Booked: ${winner.name}`;
+            req.bids = []; // Clear bids UI
+            alert(`Success! You have booked ${winner.name} for ${winner.price} BHD.`);
+            navTo('customer-dash');
+            renderRequests();
+        }
+    }
+
+    function rejectBid(reqId, idx) {
+        if(confirm("Remove this bid?")) {
+            const req = requests.find(r => r.id === reqId);
+            req.bids.splice(idx, 1);
+            viewBids(reqId); // Refresh view
+        }
+    }
+
+    function openBargain(reqId, idx, price) {
+        currentReqId = reqId;
+        currentVendorIdx = idx;
+        document.getElementById('modal-orig-price').innerText = price;
+        document.getElementById('bargain-input').value = '';
+        document.getElementById('bargain-modal').style.display = 'flex';
+    }
+
+    function submitCounterOffer() {
+        const offer = parseInt(document.getElementById('bargain-input').value);
+        const req = requests.find(r => r.id === currentReqId);
+        const vendor = req.bids[currentVendorIdx];
+        
+        document.getElementById('bargain-modal').style.display = 'none';
+
+        // Simulate Vendor Logic
+        // Vendor accepts if offer is >= 80% of original price
+        const minPrice = vendor.price * 0.8;
+
+        document.getElementById('view-bids-screen').style.opacity = '0.5'; // sim loading
+        
+        setTimeout(() => {
+            document.getElementById('view-bids-screen').style.opacity = '1';
+            
+            if(offer >= minPrice) {
+                if(confirm(`${vendor.name} ACCEPTED your offer of ${offer} BHD! Book now?`)) {
+                    vendor.price = offer; // Update price
+                    acceptBid(currentReqId, currentVendorIdx);
+                } else {
+                    vendor.price = offer; // Update price in UI but stay on screen
+                    viewBids(currentReqId);
+                }
+            } else {
+                alert(`${vendor.name} REJECTED your offer. It was too low. Please try again.`);
+            }
+        }, 1500);
+    }
+
+    /* --- VENDOR & OTHER UTILS --- */
+    function renderVendorLeads() {
+        // Display pending requests to Vendor (simple logic)
+        const container = document.getElementById('vendor-leads-list');
+        const pending = requests.filter(r => r.bids.length === 0 && !r.status.includes("Booked")); // Only show ones without Simulated bids for demo purposes, or we can show all. 
+        // For this demo, Vendor sees all "Searching" requests
+        
+        document.getElementById('v-lead-count').innerText = pending.length;
+        container.innerHTML = '';
+        
+        if(pending.length === 0) container.innerHTML = '<p style="color:#94a3b8; text-align:center;">Scanning for jobs...</p>';
+
+        pending.forEach(r => {
+            container.innerHTML += `
+                <div class="request-card" style="border-left:4px solid var(--primary);">
+                    <h4>${r.cat}</h4>
+                    <p>${r.desc}</p>
+                    <button class="btn-primary" style="padding:8px; margin-top:10px;" onclick="alert('Bid Sent!')">Bid Now</button>
+                </div>
+            `;
+        });
+    }
+
+    // Profile
+    function saveProfile() { alert('Profile Saved'); navTo('customer-dash'); }
+
+    // Clock
+    setInterval(() => {
+        const d = new Date();
+        document.getElementById('dash-time').innerText = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }, 1000);
+    
+    // Suppliers
+    const suppliers = [
+        {item: 'Cement (50kg)', price: '2.5 BHD'},
+        {item: 'Paint (18L)', price: '12.0 BHD'},
+        {item: 'PVC Pipe (3m)', price: '4.0 BHD'}
+    ];
+    const supList = document.getElementById('supplier-list');
+    suppliers.forEach(s => {
+        supList.innerHTML += `
+            <div style="background:white; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div><strong>${s.item}</strong><br><span style="color:var(--primary);">${s.price}</span></div>
+                <button style="padding:5px 15px; border-radius:20px; border:none; background:#e2e8f0;">Order</button>
+            </div>
+        `;
+    });
+
+</script>
+
+</body>
+</html>
